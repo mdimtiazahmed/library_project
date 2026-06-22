@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Members - Library System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: #0f0f1a; color: white; }
+        .sidebar {
+            background: linear-gradient(180deg, #1a1a2e, #16213e);
+            min-height: 100vh;
+            width: 250px;
+            position: fixed;
+            padding: 20px;
+            border-right: 1px solid rgba(255,255,255,0.1);
+        }
+        .sidebar-brand {
+            color: #e94560;
+            font-size: 1.4rem;
+            font-weight: 700;
+            padding: 10px 0 30px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 20px;
+        }
+        .nav-link {
+            color: rgba(255,255,255,0.7);
+            padding: 12px 15px;
+            border-radius: 10px;
+            margin-bottom: 5px;
+            transition: all 0.3s;
+        }
+        .nav-link:hover, .nav-link.active {
+            background: rgba(233,69,96,0.2);
+            color: #e94560;
+        }
+        .main-content { margin-left: 250px; padding: 30px; }
+        .card-dark {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 15px;
+        }
+        .table-dark-custom { color: white; }
+        .table-dark-custom thead th {
+            background: rgba(25,135,84,0.2);
+            color: #28a745;
+            border: none;
+            padding: 15px;
+        }
+        .table-dark-custom tbody td {
+            border-color: rgba(255,255,255,0.05);
+            padding: 12px 15px;
+            vertical-align: middle;
+        }
+        .table-dark-custom tbody tr:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        .topbar {
+            background: rgba(26,26,46,0.8);
+            border-radius: 15px;
+            padding: 15px 25px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #e94560, #0f3460);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+<!-- Sidebar -->
+<div class="sidebar">
+    <div class="sidebar-brand">
+        <i class="fas fa-book-open me-2"></i>LibraryMS
+    </div>
+    <nav>
+        <a href="/dashboard" class="nav-link">
+            <i class="fas fa-home me-2"></i>Dashboard
+        </a>
+        <a href="/books" class="nav-link">
+            <i class="fas fa-book me-2"></i>Books
+        </a>
+        <a href="/members" class="nav-link active">
+            <i class="fas fa-users me-2"></i>Members
+        </a>
+        <a href="/transactions" class="nav-link">
+            <i class="fas fa-exchange-alt me-2"></i>Transactions
+        </a>
+        <a href="/issue" class="nav-link">
+            <i class="fas fa-hand-holding-heart me-2"></i>Issue Book
+        </a>
+        <hr style="border-color: rgba(255,255,255,0.1)">
+        <a href="/logout" class="nav-link text-danger">
+            <i class="fas fa-sign-out-alt me-2"></i>Logout
+        </a>
+    </nav>
+</div>
+
+<!-- Main Content -->
+<div class="main-content">
+    <div class="topbar">
+        <h4 class="mb-0"><i class="fas fa-users me-2"></i>Members List</h4>
+        <div class="d-flex gap-2">
+            <form method="GET" action="/members" class="d-flex gap-2">
+                <input type="text" name="search" 
+                       class="form-control" 
+                       placeholder="Search by name, email, phone..."
+                       value="{{ search }}"
+                       style="width: 280px; background: rgba(255, 255, 255, 0.659); 
+                              border: 1px solid rgba(255, 255, 255, 0.645); 
+                              color: rgb(0, 0, 0); border-radius: 10px;">
+                <button type="submit" class="btn btn-outline-light">
+                    <i class="fas fa-search"></i>
+                </button>
+                {% if search %}
+                <a href="/members" class="btn btn-outline-danger">
+                    <i class="fas fa-times"></i>
+                </a>
+                {% endif %}
+            </form>
+            <a href="/members/add" class="btn btn-success">
+                <i class="fas fa-user-plus me-2"></i>Add New Member
+            </a>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="card-dark p-4">
+        <table class="table table-dark-custom">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Member</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Address</th>
+                    <th>Join Date</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for member in members %}
+                <tr>
+                    <td>{{ member[0] }}</td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="avatar">{{ member[1][0] }}</div>
+                            <strong>{{ member[1] }}</strong>
+                        </div>
+                    </td>
+                    <td>{{ member[2] }}</td>
+                    <td>{{ member[3] }}</td>
+                    <td>{{ member[4] }}</td>
+                    <td>{{ member[5] }}</td>
+                    <td>
+                        {% if member[6] == 'active' %}
+                            <span class="badge bg-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="/members/delete/{{ member[0] }}"
+                           onclick="return confirm('Delete this member?')"
+                           class="btn btn-sm btn-danger">
+                            <i class="fas fa-trash"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>

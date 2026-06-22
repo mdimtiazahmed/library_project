@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Add Book - Library System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: #0f0f1a; color: white; }
+        .sidebar {
+            background: linear-gradient(180deg, #1a1a2e, #16213e);
+            min-height: 100vh;
+            width: 250px;
+            position: fixed;
+            padding: 20px;
+            border-right: 1px solid rgba(255,255,255,0.1);
+        }
+        .sidebar-brand {
+            color: #e94560;
+            font-size: 1.4rem;
+            font-weight: 700;
+            padding: 10px 0 30px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 20px;
+        }
+        .nav-link {
+            color: rgba(255,255,255,0.7);
+            padding: 12px 15px;
+            border-radius: 10px;
+            margin-bottom: 5px;
+            transition: all 0.3s;
+        }
+        .nav-link:hover, .nav-link.active {
+            background: rgba(233,69,96,0.2);
+            color: #e94560;
+        }
+        .main-content { margin-left: 250px; padding: 30px; }
+        .card-dark {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 35px;
+        }
+        .form-control, .form-select {
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: white;
+            border-radius: 10px;
+            padding: 12px;
+        }
+        .form-control:focus, .form-select:focus {
+            background: rgba(255,255,255,0.1);
+            border-color: #e94560;
+            color: white;
+            box-shadow: none;
+        }
+        .form-select option { background: #1a1a2e; }
+        label { color: rgba(255,255,255,0.8); margin-bottom: 6px; }
+        .topbar {
+            background: rgba(26,26,46,0.8);
+            border-radius: 15px;
+            padding: 15px 25px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .btn-submit {
+            background: linear-gradient(45deg, #e94560, #0f3460);
+            border: none;
+            border-radius: 10px;
+            padding: 12px 30px;
+            color: white;
+            font-weight: 600;
+        }
+        .btn-submit:hover { opacity: 0.9; color: white; }
+    </style>
+</head>
+<body>
+<!-- Sidebar -->
+<div class="sidebar">
+    <div class="sidebar-brand">
+        <i class="fas fa-book-open me-2"></i>LibraryMS
+    </div>
+    <nav>
+        <a href="/dashboard" class="nav-link">
+            <i class="fas fa-home me-2"></i>Dashboard
+        </a>
+        <a href="/books" class="nav-link active">
+            <i class="fas fa-book me-2"></i>Books
+        </a>
+        <a href="/members" class="nav-link">
+            <i class="fas fa-users me-2"></i>Members
+        </a>
+        <a href="/transactions" class="nav-link">
+            <i class="fas fa-exchange-alt me-2"></i>Transactions
+        </a>
+        <a href="/issue" class="nav-link">
+            <i class="fas fa-hand-holding-heart me-2"></i>Issue Book
+        </a>
+        <hr style="border-color: rgba(255,255,255,0.1)">
+        <a href="/logout" class="nav-link text-danger">
+            <i class="fas fa-sign-out-alt me-2"></i>Logout
+        </a>
+    </nav>
+</div>
+
+<!-- Main Content -->
+<div class="main-content">
+    <div class="topbar">
+        <h4 class="mb-0"><i class="fas fa-plus me-2"></i>Add New Book</h4>
+        <a href="/books" class="btn btn-outline-light btn-sm">
+            <i class="fas fa-arrow-left me-2"></i>Back to Books
+        </a>
+    </div>
+
+    <div class="card-dark">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST">
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <label><i class="fas fa-heading me-2"></i>Book Title</label>
+                    <input type="text" name="title" class="form-control"
+                           placeholder="Enter book title" required>
+                </div>
+                <div class="col-md-6">
+                    <label><i class="fas fa-user-edit me-2"></i>Author</label>
+                    <input type="text" name="author" class="form-control"
+                           placeholder="Enter author name" required>
+                </div>
+                <div class="col-md-6">
+                    <label><i class="fas fa-barcode me-2"></i>ISBN</label>
+                    <input type="text" name="isbn" class="form-control"
+                           placeholder="Enter ISBN number">
+                </div>
+                <div class="col-md-6">
+                    <label><i class="fas fa-tag me-2"></i>Category</label>
+                    <select name="category" class="form-select">
+                        <option value="Fiction">Fiction</option>
+                        <option value="Technology">Technology</option>
+                        <option value="Science">Science</option>
+                        <option value="History">History</option>
+                        <option value="Fantasy">Fantasy</option>
+                        <option value="Biography">Biography</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label><i class="fas fa-copy me-2"></i>Number of Copies</label>
+                    <input type="number" name="copies" class="form-control"
+                           placeholder="Enter number of copies" min="1" value="1" required>
+                </div>
+                <div class="col-12 mt-2">
+                    <button type="submit" class="btn btn-submit">
+                        <i class="fas fa-plus me-2"></i>Add Book
+                    </button>
+                    <a href="/books" class="btn btn-outline-light ms-3">Cancel</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>
