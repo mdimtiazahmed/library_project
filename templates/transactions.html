@@ -145,8 +145,8 @@
                         {% endif %}
                     </td>
                     <td>
-                        {% if t[6] > 0 %}
-                            <span class="text-danger">৳{{ t[6] }}</span>
+                        {% if t[6] and t[6] > 0 %}
+                            <span class="text-danger">৳{{ t[6] or 0 }}</span>
                         {% else %}
                             <span class="text-success">৳0</span>
                         {% endif %}
