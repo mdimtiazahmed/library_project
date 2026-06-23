@@ -67,7 +67,6 @@
     </style>
 </head>
 <body>
-<!-- Sidebar -->
 <div class="sidebar">
     <div class="sidebar-brand">
         <i class="fas fa-book-open me-2"></i>LibraryMS
@@ -95,12 +94,9 @@
     </nav>
 </div>
 
-<!-- Main Content -->
 <div class="main-content">
     <div class="topbar">
-        <h4 class="mb-0">
-            <i class="fas fa-exchange-alt me-2"></i>Transactions
-        </h4>
+        <h4 class="mb-0"><i class="fas fa-exchange-alt me-2"></i>Transactions</h4>
         <a href="/issue" class="btn btn-warning">
             <i class="fas fa-plus me-2"></i>Issue New Book
         </a>
@@ -121,6 +117,7 @@
                     <th>#</th>
                     <th>Book</th>
                     <th>Member</th>
+                    <th>Member ID</th>
                     <th>Issue Date</th>
                     <th>Due Date</th>
                     <th>Return Date</th>
@@ -135,6 +132,7 @@
                     <td>{{ t[0] }}</td>
                     <td><strong>{{ t[1] }}</strong></td>
                     <td>{{ t[2] }}</td>
+                    <td><code style="color:#ffc107">{{ t[3] }}</code></td>
                     <td>{{ t[4] }}</td>
                     <td>{{ t[5] }}</td>
                     <td>
@@ -145,23 +143,23 @@
                         {% endif %}
                     </td>
                     <td>
-                        {% if t[9] and t[9] > 0 %}
-                            <span class="text-danger">৳{{ t[6] or 0 }}</span>
+                        {% if t[7] and t[7] > 0 %}
+                            <span class="text-danger">৳{{ t[7] }}</span>
                         {% else %}
                             <span class="text-success">৳0</span>
                         {% endif %}
                     </td>
                     <td>
-                        {% if t[9] == 'issued' %}
+                        {% if t[8] == 'issued' %}
                             <span class="badge bg-warning text-dark">Issued</span>
-                        {% elif t[9] == 'returned' %}
+                        {% elif t[8] == 'returned' %}
                             <span class="badge bg-success">Returned</span>
                         {% else %}
                             <span class="badge bg-danger">Overdue</span>
                         {% endif %}
                     </td>
                     <td>
-                        {% if t[9] == 'issued' %}
+                        {% if t[8] == 'issued' or t[8] == 'overdue' %}
                             <a href="/return/{{ t[0] }}"
                                onclick="return confirm('Mark as returned?')"
                                class="btn btn-sm btn-success">
