@@ -6,11 +6,12 @@ app = Flask(__name__)
 app.secret_key = 'library_secret_key_2024'
 
 # Database Configuration
-app.config['MYSQL_HOST'] = 'mysql.railway.internal'
-app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = 'NODgTKVgETjLVTKAYMjtTyGSMXxOBQIB'
-app.config['MYSQL_DB'] = 'railway'
-app.config['MYSQL_PORT'] = 3306
+import os
+app.config['MYSQL_HOST'] = os.environ.get('MYSQLHOST', 'localhost')
+app.config['MYSQL_USER'] = os.environ.get('MYSQLUSER', 'root')
+app.config['MYSQL_PASSWORD'] = os.environ.get('MYSQLPASSWORD', '')
+app.config['MYSQL_DB'] = os.environ.get('MYSQLDATABASE', 'railway')
+app.config['MYSQL_PORT'] = int(os.environ.get('MYSQLPORT', 3306))
 
 mysql = MySQL(app)
 
