@@ -135,17 +135,17 @@
                     <td>{{ t[0] }}</td>
                     <td><strong>{{ t[1] }}</strong></td>
                     <td>{{ t[2] }}</td>
-                    <td>{{ t[3] }}</td>
                     <td>{{ t[4] }}</td>
+                    <td>{{ t[5] }}</td>
                     <td>
-                        {% if t[5] %}
-                            {{ t[5] }}
+                        {% if t[6] %}
+                            {{ t[6] }}
                         {% else %}
                             <span class="text-white-50">Not returned</span>
                         {% endif %}
                     </td>
                     <td>
-                        {% if t[6] and t[6] > 0 %}
+                        {% if t[7] and t[7] > 0 %}
                             <span class="text-danger">৳{{ t[6] or 0 }}</span>
                         {% else %}
                             <span class="text-success">৳0</span>
