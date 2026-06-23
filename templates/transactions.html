@@ -145,23 +145,23 @@
                         {% endif %}
                     </td>
                     <td>
-                        {% if t[7] and t[7] > 0 %}
+                        {% if t[9] and t[9] > 0 %}
                             <span class="text-danger">৳{{ t[6] or 0 }}</span>
                         {% else %}
                             <span class="text-success">৳0</span>
                         {% endif %}
                     </td>
                     <td>
-                        {% if t[8] == 'issued' %}
+                        {% if t[9] == 'issued' %}
                             <span class="badge bg-warning text-dark">Issued</span>
-                        {% elif t[7] == 'returned' %}
+                        {% elif t[9] == 'returned' %}
                             <span class="badge bg-success">Returned</span>
                         {% else %}
                             <span class="badge bg-danger">Overdue</span>
                         {% endif %}
                     </td>
                     <td>
-                        {% if t[8] == 'issued' %}
+                        {% if t[9] == 'issued' %}
                             <a href="/return/{{ t[0] }}"
                                onclick="return confirm('Mark as returned?')"
                                class="btn btn-sm btn-success">
