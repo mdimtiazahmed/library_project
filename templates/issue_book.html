@@ -54,7 +54,6 @@
             color: white;
             box-shadow: none;
         }
-        .form-select option { background: #1a1a2e; }
         label { color: rgba(255,255,255,0.8); margin-bottom: 6px; }
         .topbar {
             background: rgba(26,26,46,0.8);
@@ -73,7 +72,41 @@
             color: #1a1a2e;
             font-weight: 700;
         }
-        .btn-submit:hover { opacity: 0.9; color: #1a1a2e; }
+        .search-results {
+            position: absolute;
+            background: #1a1a2e;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+            width: 100%;
+            z-index: 1000;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        .search-result-item {
+            padding: 12px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            transition: background 0.2s;
+        }
+        .search-result-item:hover {
+            background: rgba(233,69,96,0.2);
+        }
+        .selected-info {
+            background: rgba(255,193,7,0.1);
+            border: 1px solid rgba(255,193,7,0.3);
+            border-radius: 10px;
+            padding: 12px 15px;
+            margin-top: 8px;
+            display: none;
+        }
+        .out-of-stock {
+            color: #e94560;
+            font-size: 0.85rem;
+        }
+        .in-stock {
+            color: #28a745;
+            font-size: 0.85rem;
+        }
         .info-box {
             background: rgba(255,193,7,0.1);
             border: 1px solid rgba(255,193,7,0.3);
@@ -84,7 +117,6 @@
     </style>
 </head>
 <body>
-<!-- Sidebar -->
 <div class="sidebar">
     <div class="sidebar-brand">
         <i class="fas fa-book-open me-2"></i>LibraryMS
@@ -112,14 +144,11 @@
     </nav>
 </div>
 
-<!-- Main Content -->
 <div class="main-content">
     <div class="topbar">
-        <h4 class="mb-0">
-            <i class="fas fa-hand-holding-heart me-2"></i>Issue Book
-        </h4>
+        <h4 class="mb-0"><i class="fas fa-hand-holding-heart me-2"></i>Issue Book</h4>
         <a href="/transactions" class="btn btn-outline-light btn-sm">
-            <i class="fas fa-arrow-left me-2"></i>Back to Transactions
+            <i class="fas fa-arrow-left me-2"></i>Back
         </a>
     </div>
 
@@ -139,28 +168,46 @@
 
         <form method="POST">
             <div class="row g-4">
+
+                <!-- Book Search -->
                 <div class="col-md-6">
-                    <label><i class="fas fa-book me-2"></i>Select Book</label>
-                    <select name="book_id" class="form-select" required>
-                        <option value="">-- Choose Available Book --</option>
-                        {% for book in books %}
-                            <option value="{{ book[0] }}">{{ book[1] }}</option>
-                        {% endfor %}
-                    </select>
+                    <label><i class="fas fa-book me-2"></i>Search Book</label>
+                    <div class="position-relative">
+                        <input type="text" id="bookSearch" class="form-control"
+                               placeholder="Type title, author or ISBN...">
+                        <div id="bookResults" class="search-results" style="display:none"></div>
+                    </div>
+                    <input type="hidden" name="book_id" id="selectedBookId">
+                    <div id="selectedBookInfo" class="selected-info">
+                        <strong id="bookTitle"></strong><br>
+                        <small>Author: <span id="bookAuthor"></span></small><br>
+                        <small>ISBN: <span id="bookIsbn"></span></small><br>
+                        <small id="bookStock"></small>
+                    </div>
                 </div>
+
+                <!-- Member Search -->
                 <div class="col-md-6">
-                    <label><i class="fas fa-user me-2"></i>Select Member</label>
-                    <select name="member_id" class="form-select" required>
-                        <option value="">-- Choose Member --</option>
-                        {% for member in members %}
-                            <option value="{{ member[0] }}">{{ member[1] }}</option>
-                        {% endfor %}
-                    </select>
+                    <label><i class="fas fa-user me-2"></i>Search Member</label>
+                    <div class="position-relative">
+                        <input type="text" id="memberSearch" class="form-control"
+                               placeholder="Type name, member ID or phone...">
+                        <div id="memberResults" class="search-results" style="display:none"></div>
+                    </div>
+                    <input type="hidden" name="member_id" id="selectedMemberId">
+                    <div id="selectedMemberInfo" class="selected-info">
+                        <strong id="memberName"></strong><br>
+                        <small>Member ID: <span id="memberCode"></span></small><br>
+                        <small>Expires: <span id="memberExpire"></span></small>
+                    </div>
                 </div>
+
+                <!-- Due Date -->
                 <div class="col-md-6">
                     <label><i class="fas fa-calendar me-2"></i>Due Date</label>
                     <input type="date" name="due_date" class="form-control" required>
                 </div>
+
                 <div class="col-12 mt-2">
                     <button type="submit" class="btn btn-submit">
                         <i class="fas fa-hand-holding-heart me-2"></i>Issue Book
@@ -171,5 +218,100 @@
         </form>
     </div>
 </div>
+
+<script>
+// Book Search
+document.getElementById('bookSearch').addEventListener('input', function() {
+    const q = this.value;
+    if (q.length < 1) {
+        document.getElementById('bookResults').style.display = 'none';
+        return;
+    }
+    fetch(`/search/books?q=${q}`)
+        .then(r => r.json())
+        .then(books => {
+            const div = document.getElementById('bookResults');
+            div.innerHTML = '';
+            if (books.length === 0) {
+                div.innerHTML = '<div class="search-result-item text-white-50">No books found</div>';
+            }
+            books.forEach(b => {
+                const item = document.createElement('div');
+                item.className = 'search-result-item';
+                const stockClass = b.available > 0 ? 'in-stock' : 'out-of-stock';
+                const stockText = b.available > 0 ? `✅ ${b.available} available` : '❌ Out of stock';
+                item.innerHTML = `
+                    <strong>${b.title}</strong><br>
+                    <small>Author: ${b.author} | ISBN: ${b.isbn}</small><br>
+                    <small class="${stockClass}">${stockText}</small>
+                `;
+                item.addEventListener('click', function() {
+                    document.getElementById('selectedBookId').value = b.id;
+                    document.getElementById('bookSearch').value = b.title;
+                    document.getElementById('bookTitle').textContent = b.title;
+                    document.getElementById('bookAuthor').textContent = b.author;
+                    document.getElementById('bookIsbn').textContent = b.isbn;
+                    const stockEl = document.getElementById('bookStock');
+                    if (b.available > 0) {
+                        stockEl.innerHTML = `<span class="in-stock">✅ ${b.available} copies available</span>`;
+                    } else {
+                        stockEl.innerHTML = `<span class="out-of-stock">❌ Out of stock — cannot issue!</span>`;
+                    }
+                    document.getElementById('selectedBookInfo').style.display = 'block';
+                    div.style.display = 'none';
+                });
+                div.appendChild(item);
+            });
+            div.style.display = 'block';
+        });
+});
+
+// Member Search
+document.getElementById('memberSearch').addEventListener('input', function() {
+    const q = this.value;
+    if (q.length < 1) {
+        document.getElementById('memberResults').style.display = 'none';
+        return;
+    }
+    fetch(`/search/members?q=${q}`)
+        .then(r => r.json())
+        .then(members => {
+            const div = document.getElementById('memberResults');
+            div.innerHTML = '';
+            if (members.length === 0) {
+                div.innerHTML = '<div class="search-result-item text-white-50">No members found</div>';
+            }
+            members.forEach(m => {
+                const item = document.createElement('div');
+                item.className = 'search-result-item';
+                item.innerHTML = `
+                    <strong>${m.name}</strong><br>
+                    <small>ID: ${m.code} | Expires: ${m.expire}</small>
+                `;
+                item.addEventListener('click', function() {
+                    document.getElementById('selectedMemberId').value = m.id;
+                    document.getElementById('memberSearch').value = m.name;
+                    document.getElementById('memberName').textContent = m.name;
+                    document.getElementById('memberCode').textContent = m.code;
+                    document.getElementById('memberExpire').textContent = m.expire;
+                    document.getElementById('selectedMemberInfo').style.display = 'block';
+                    div.style.display = 'none';
+                });
+                div.appendChild(item);
+            });
+            div.style.display = 'block';
+        });
+});
+
+// Hide results on outside click
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('#bookSearch') && !e.target.closest('#bookResults')) {
+        document.getElementById('bookResults').style.display = 'none';
+    }
+    if (!e.target.closest('#memberSearch') && !e.target.closest('#memberResults')) {
+        document.getElementById('memberResults').style.display = 'none';
+    }
+});
+</script>
 </body>
 </html>

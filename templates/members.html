@@ -73,12 +73,12 @@
             align-items: center;
             justify-content: center;
             font-weight: 700;
-            font-size: 1rem;
         }
+        .expired { color: #e94560; }
+        .active-expire { color: #28a745; }
     </style>
 </head>
 <body>
-<!-- Sidebar -->
 <div class="sidebar">
     <div class="sidebar-brand">
         <i class="fas fa-book-open me-2"></i>LibraryMS
@@ -106,19 +106,18 @@
     </nav>
 </div>
 
-<!-- Main Content -->
 <div class="main-content">
     <div class="topbar">
         <h4 class="mb-0"><i class="fas fa-users me-2"></i>Members List</h4>
         <div class="d-flex gap-2">
             <form method="GET" action="/members" class="d-flex gap-2">
-                <input type="text" name="search" 
-                       class="form-control" 
-                       placeholder="Search by name, email, phone..."
+                <input type="text" name="search"
+                       class="form-control"
+                       placeholder="Search by name, ID, phone..."
                        value="{{ search }}"
-                       style="width: 280px; background: rgba(255, 255, 255, 0.659); 
-                              border: 1px solid rgba(255, 255, 255, 0.645); 
-                              color: rgb(0, 0, 0); border-radius: 10px;">
+                       style="width: 280px; background: rgba(255,255,255,0.1);
+                              border: 1px solid rgba(255,255,255,0.2);
+                              color: white; border-radius: 10px;">
                 <button type="submit" class="btn btn-outline-light">
                     <i class="fas fa-search"></i>
                 </button>
@@ -146,12 +145,11 @@
         <table class="table table-dark-custom">
             <thead>
                 <tr>
-                    <th>#</th>
                     <th>Member</th>
+                    <th>Member ID</th>
                     <th>Email</th>
                     <th>Phone</th>
-                    <th>Address</th>
-                    <th>Join Date</th>
+                    <th>Membership Expires</th>
                     <th>Status</th>
                     <th>Action</th>
                 </tr>
@@ -159,17 +157,22 @@
             <tbody>
                 {% for member in members %}
                 <tr>
-                    <td>{{ member[0] }}</td>
                     <td>
                         <div class="d-flex align-items-center gap-2">
                             <div class="avatar">{{ member[1][0] }}</div>
                             <strong>{{ member[1] }}</strong>
                         </div>
                     </td>
+                    <td><code style="color:#ffc107">{{ member[8] }}</code></td>
                     <td>{{ member[2] }}</td>
                     <td>{{ member[3] }}</td>
-                    <td>{{ member[4] }}</td>
-                    <td>{{ member[5] }}</td>
+                    <td>
+                        {% if member[9] %}
+                            <span class="active-expire">{{ member[9] }}</span>
+                        {% else %}
+                            <span class="text-white-50">—</span>
+                        {% endif %}
+                    </td>
                     <td>
                         {% if member[6] == 'active' %}
                             <span class="badge bg-success">Active</span>
