@@ -8,17 +8,13 @@ app = Flask(__name__)
 app.secret_key = 'library_secret_key_2024'
 
 def get_db():
-    import ssl
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
     return pymysql.connect(
         host=os.environ.get('MYSQLHOST', 'localhost'),
         user=os.environ.get('MYSQLUSER', 'root'),
         password=os.environ.get('MYSQLPASSWORD', ''),
         database=os.environ.get('MYSQLDATABASE', 'library_management'),
         port=int(os.environ.get('MYSQLPORT', 3306)),
-        ssl_context=ctx,
+        ssl={'ca': None},
         cursorclass=pymysql.cursors.Cursor
     )
 
