@@ -14,7 +14,7 @@ def get_db():
         password=os.environ.get('MYSQLPASSWORD', ''),
         database=os.environ.get('MYSQLDATABASE', 'library_management'),
         port=int(os.environ.get('MYSQLPORT', 3306)),
-        ssl={'ssl': {}},
+        ssl={'ssl': {'ssl_mode': 'REQUIRED'}},
         cursorclass=pymysql.cursors.Cursor
     )
 
