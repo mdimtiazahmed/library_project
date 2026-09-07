@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
-import pymysql
-import pymysql.cursors
+import psycopg2
+import psycopg2.extras
 import os
 from datetime import date
 
@@ -8,36 +8,19 @@ app = Flask(__name__)
 app.secret_key = 'library_secret_key_2024'
 
 def get_db():
-    import tempfile
-    ca_cert = os.environ.get('MYSQL_CA_CERT', '')
-    if ca_cert:
-        tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.pem', mode='w')
-        tmp.write(ca_cert)
-        tmp.close()
-        ssl_config = {'ca': tmp.name}
-    else:
-        ssl_config = None
-    return pymysql.connect(
-        host=os.environ.get('MYSQLHOST', 'localhost'),
-        user=os.environ.get('MYSQLUSER', 'root'),
-        password=os.environ.get('MYSQLPASSWORD', ''),
-        database=os.environ.get('MYSQLDATABASE', 'library_management'),
-        port=int(os.environ.get('MYSQLPORT', 3306)),
-        ssl=ssl_config,
-        cursorclass=pymysql.cursors.Cursor
-    )
+    return psycopg2.connect(os.environ.get('DATABASE_URL'), sslmode='require')
 
 def init_db():
     conn = get_db()
     cur = conn.cursor()
     cur.execute("""CREATE TABLE IF NOT EXISTS users (
-        user_id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id SERIAL PRIMARY KEY,
         username VARCHAR(50),
         password VARCHAR(100),
         role VARCHAR(20) DEFAULT 'admin'
     )""")
     cur.execute("""CREATE TABLE IF NOT EXISTS books (
-        book_id INT AUTO_INCREMENT PRIMARY KEY,
+        book_id SERIAL PRIMARY KEY,
         title VARCHAR(200),
         author VARCHAR(100),
         isbn VARCHAR(50),
@@ -46,29 +29,30 @@ def init_db():
         available_copies INT DEFAULT 1
     )""")
     cur.execute("""CREATE TABLE IF NOT EXISTS members (
-        member_id INT AUTO_INCREMENT PRIMARY KEY,
+        member_id SERIAL PRIMARY KEY,
         name VARCHAR(100),
         email VARCHAR(100),
         phone VARCHAR(20),
         address VARCHAR(200),
-        join_date DATE DEFAULT (CURDATE()),
+        join_date DATE DEFAULT CURRENT_DATE,
         status VARCHAR(20) DEFAULT 'active',
         member_code VARCHAR(20),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         membership_expire DATE
     )""")
     cur.execute("""CREATE TABLE IF NOT EXISTS transactions (
-        transaction_id INT AUTO_INCREMENT PRIMARY KEY,
+        transaction_id SERIAL PRIMARY KEY,
         book_id INT,
         member_id INT,
-        issue_date DATE DEFAULT (CURDATE()),
+        issue_date DATE DEFAULT CURRENT_DATE,
         due_date DATE,
         return_date DATE,
         fine_amount INT DEFAULT 0,
         status VARCHAR(20) DEFAULT 'issued'
     )""")
-    cur.execute("""INSERT IGNORE INTO users (user_id, username, password, role) 
-        VALUES (1, 'admin', 'admin123', 'admin')""")
+    cur.execute("""INSERT INTO users (user_id, username, password, role) 
+        VALUES (1, 'admin', 'admin123', 'admin')
+        ON CONFLICT (user_id) DO NOTHING""")
     conn.commit()
     cur.close()
     conn.close()
@@ -139,7 +123,7 @@ def books():
     cur = conn.cursor()
     if search:
         cur.execute("""SELECT * FROM books 
-                      WHERE title LIKE %s OR author LIKE %s OR category LIKE %s""",
+                      WHERE title ILIKE %s OR author ILIKE %s OR category ILIKE %s""",
                    (f'%{search}%', f'%{search}%', f'%{search}%'))
     else:
         cur.execute("SELECT * FROM books")
@@ -192,8 +176,8 @@ def members():
     cur = conn.cursor()
     if search:
         cur.execute("""SELECT * FROM members 
-                      WHERE name LIKE %s OR email LIKE %s 
-                      OR phone LIKE %s OR member_code LIKE %s""",
+                      WHERE name ILIKE %s OR email ILIKE %s 
+                      OR phone ILIKE %s OR member_code ILIKE %s""",
                    (f'%{search}%', f'%{search}%', f'%{search}%', f'%{search}%'))
     else:
         cur.execute("SELECT * FROM members")
@@ -330,7 +314,7 @@ def search_books_api():
     conn = get_db()
     cur = conn.cursor()
     cur.execute("""SELECT book_id, title, author, isbn, available_copies 
-                  FROM books WHERE title LIKE %s OR author LIKE %s OR isbn LIKE %s""",
+                  FROM books WHERE title ILIKE %s OR author ILIKE %s OR isbn ILIKE %s""",
                (f'%{search}%', f'%{search}%', f'%{search}%'))
     books = cur.fetchall()
     cur.close()
@@ -344,7 +328,7 @@ def search_members_api():
     conn = get_db()
     cur = conn.cursor()
     cur.execute("""SELECT member_id, name, member_code, membership_expire 
-                  FROM members WHERE name LIKE %s OR member_code LIKE %s OR phone LIKE %s""",
+                  FROM members WHERE name ILIKE %s OR member_code ILIKE %s OR phone ILIKE %s""",
                (f'%{search}%', f'%{search}%', f'%{search}%'))
     members = cur.fetchall()
     cur.close()

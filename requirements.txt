@@ -1,5 +1,4 @@
 flask
-pymysql
-cryptography
+psycopg2-binary
 bcrypt
 gunicorn
