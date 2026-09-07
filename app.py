@@ -10,8 +10,9 @@ app.secret_key = 'library_secret_key_2024'
 app.config['MYSQL_HOST'] = os.environ.get('MYSQLHOST', 'localhost')
 app.config['MYSQL_USER'] = os.environ.get('MYSQLUSER', 'root')
 app.config['MYSQL_PASSWORD'] = os.environ.get('MYSQLPASSWORD', '')
-app.config['MYSQL_DB'] = os.environ.get('MYSQLDATABASE', 'railway')
+app.config['MYSQL_DB'] = os.environ.get('MYSQLDATABASE', 'library_management')
 app.config['MYSQL_PORT'] = int(os.environ.get('MYSQLPORT', 3306))
+app.config['MYSQL_SSL'] = {'ssl': {}}
 
 mysql = MySQL(app)
 
@@ -56,9 +57,15 @@ def init_db():
     mysql.connection.commit()
     cur.close()
 
-with app.app_context():
-    init_db()
-    
+@app.before_request
+def initialize():
+    global db_initialized
+    if not db_initialized:
+        init_db()
+        db_initialized = True
+
+db_initialized = False
+
 # ==================== LOGIN ====================
 @app.route('/', methods=['GET', 'POST'])
 def login():
