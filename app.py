@@ -8,20 +8,15 @@ app = Flask(__name__)
 app.secret_key = 'library_secret_key_2024'
 
 def get_db():
-    import ssl
     import tempfile
-    
     ca_cert = os.environ.get('MYSQL_CA_CERT', '')
-    
     if ca_cert:
-        # Certificate file বানাও
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.pem', mode='w')
         tmp.write(ca_cert)
         tmp.close()
         ssl_config = {'ca': tmp.name}
     else:
         ssl_config = None
-    
     return pymysql.connect(
         host=os.environ.get('MYSQLHOST', 'localhost'),
         user=os.environ.get('MYSQLUSER', 'root'),
