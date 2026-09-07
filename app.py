@@ -1,25 +1,26 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
-from flask_mysqldb import MySQL
+import pymysql
+import pymysql.cursors
 import os
 from datetime import date
 
 app = Flask(__name__)
 app.secret_key = 'library_secret_key_2024'
 
-# Database Configuration
-app.config['MYSQL_HOST'] = os.environ.get('MYSQLHOST', 'localhost')
-app.config['MYSQL_USER'] = os.environ.get('MYSQLUSER', 'root')
-app.config['MYSQL_PASSWORD'] = os.environ.get('MYSQLPASSWORD', '')
-app.config['MYSQL_DB'] = os.environ.get('MYSQLDATABASE', 'library_management')
-app.config['MYSQL_PORT'] = int(os.environ.get('MYSQLPORT', 3306))
-app.config['MYSQL_SSL_DISABLED'] = False
-
-mysql = MySQL(app)
-
-db_initialized = False
+def get_db():
+    return pymysql.connect(
+        host=os.environ.get('MYSQLHOST', 'localhost'),
+        user=os.environ.get('MYSQLUSER', 'root'),
+        password=os.environ.get('MYSQLPASSWORD', ''),
+        database=os.environ.get('MYSQLDATABASE', 'library_management'),
+        port=int(os.environ.get('MYSQLPORT', 3306)),
+        ssl={'ssl': {}},
+        cursorclass=pymysql.cursors.Cursor
+    )
 
 def init_db():
-    cur = mysql.connection.cursor()
+    conn = get_db()
+    cur = conn.cursor()
     cur.execute("""CREATE TABLE IF NOT EXISTS users (
         user_id INT AUTO_INCREMENT PRIMARY KEY,
         username VARCHAR(50),
@@ -59,18 +60,16 @@ def init_db():
     )""")
     cur.execute("""INSERT IGNORE INTO users (user_id, username, password, role) 
         VALUES (1, 'admin', 'admin123', 'admin')""")
-    mysql.connection.commit()
+    conn.commit()
     cur.close()
+    conn.close()
 
-@app.before_request
-def initialize():
-    global db_initialized
-    if not db_initialized:
-        try:
-            init_db()
-            db_initialized = True
-        except Exception as e:
-            print(f"DB init error: {e}")
+with app.app_context():
+    try:
+        init_db()
+        print("DB initialized successfully!")
+    except Exception as e:
+        print(f"DB init error: {e}")
 
 # ==================== LOGIN ====================
 @app.route('/', methods=['GET', 'POST'])
@@ -78,10 +77,12 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        cur = mysql.connection.cursor()
+        conn = get_db()
+        cur = conn.cursor()
         cur.execute("SELECT * FROM users WHERE username = %s", (username,))
         user = cur.fetchone()
         cur.close()
+        conn.close()
         if user and password == user[2]:
             session['user_id'] = user[0]
             session['username'] = user[1]
@@ -101,7 +102,8 @@ def logout():
 def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    cur = mysql.connection.cursor()
+    conn = get_db()
+    cur = conn.cursor()
     cur.execute("SELECT COUNT(*) FROM books")
     total_books = cur.fetchone()[0]
     cur.execute("SELECT COUNT(*) FROM members")
@@ -111,6 +113,7 @@ def dashboard():
     cur.execute("SELECT COUNT(*) FROM transactions WHERE status='overdue'")
     overdue_books = cur.fetchone()[0]
     cur.close()
+    conn.close()
     return render_template('dashboard.html',
         total_books=total_books,
         total_members=total_members,
@@ -123,7 +126,8 @@ def books():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     search = request.args.get('search', '')
-    cur = mysql.connection.cursor()
+    conn = get_db()
+    cur = conn.cursor()
     if search:
         cur.execute("""SELECT * FROM books 
                       WHERE title LIKE %s OR author LIKE %s OR category LIKE %s""",
@@ -132,6 +136,7 @@ def books():
         cur.execute("SELECT * FROM books")
     all_books = cur.fetchall()
     cur.close()
+    conn.close()
     return render_template('books.html', books=all_books, search=search)
 
 @app.route('/books/add', methods=['GET', 'POST'])
@@ -144,11 +149,13 @@ def add_book():
         isbn = request.form['isbn']
         category = request.form['category']
         copies = request.form['copies']
-        cur = mysql.connection.cursor()
+        conn = get_db()
+        cur = conn.cursor()
         cur.execute("INSERT INTO books (title, author, isbn, category, total_copies, available_copies) VALUES (%s, %s, %s, %s, %s, %s)",
             (title, author, isbn, category, copies, copies))
-        mysql.connection.commit()
+        conn.commit()
         cur.close()
+        conn.close()
         flash('Book added successfully!', 'success')
         return redirect(url_for('books'))
     return render_template('add_book.html')
@@ -157,10 +164,12 @@ def add_book():
 def delete_book(id):
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    cur = mysql.connection.cursor()
+    conn = get_db()
+    cur = conn.cursor()
     cur.execute("DELETE FROM books WHERE book_id = %s", (id,))
-    mysql.connection.commit()
+    conn.commit()
     cur.close()
+    conn.close()
     flash('Book deleted!', 'success')
     return redirect(url_for('books'))
 
@@ -170,7 +179,8 @@ def members():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     search = request.args.get('search', '')
-    cur = mysql.connection.cursor()
+    conn = get_db()
+    cur = conn.cursor()
     if search:
         cur.execute("""SELECT * FROM members 
                       WHERE name LIKE %s OR email LIKE %s 
@@ -180,6 +190,7 @@ def members():
         cur.execute("SELECT * FROM members")
     all_members = cur.fetchall()
     cur.close()
+    conn.close()
     return render_template('members.html', members=all_members, search=search)
 
 @app.route('/members/add', methods=['GET', 'POST'])
@@ -192,14 +203,16 @@ def add_member():
         phone = request.form['phone']
         address = request.form['address']
         expire_date = request.form['expire_date']
-        cur = mysql.connection.cursor()
+        conn = get_db()
+        cur = conn.cursor()
         cur.execute("SELECT COUNT(*) FROM members")
         count = cur.fetchone()[0]
         member_code = f'MEM-{str(count + 1).zfill(4)}'
         cur.execute("INSERT INTO members (name, email, phone, address, member_code, membership_expire) VALUES (%s, %s, %s, %s, %s, %s)",
             (name, email, phone, address, member_code, expire_date))
-        mysql.connection.commit()
+        conn.commit()
         cur.close()
+        conn.close()
         flash(f'Member added! Member ID: {member_code}', 'success')
         return redirect(url_for('members'))
     return render_template('add_member.html')
@@ -208,10 +221,12 @@ def add_member():
 def delete_member(id):
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    cur = mysql.connection.cursor()
+    conn = get_db()
+    cur = conn.cursor()
     cur.execute("DELETE FROM members WHERE member_id = %s", (id,))
-    mysql.connection.commit()
+    conn.commit()
     cur.close()
+    conn.close()
     flash('Member deleted!', 'success')
     return redirect(url_for('members'))
 
@@ -220,7 +235,8 @@ def delete_member(id):
 def transactions():
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    cur = mysql.connection.cursor()
+    conn = get_db()
+    cur = conn.cursor()
     cur.execute("""
         SELECT t.transaction_id, b.title, m.name, m.member_code,
                t.issue_date, t.due_date, t.return_date,
@@ -232,13 +248,15 @@ def transactions():
     """)
     all_transactions = cur.fetchall()
     cur.close()
+    conn.close()
     return render_template('transactions.html', transactions=all_transactions)
 
 @app.route('/issue', methods=['GET', 'POST'])
 def issue_book():
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    cur = mysql.connection.cursor()
+    conn = get_db()
+    cur = conn.cursor()
     if request.method == 'POST':
         book_id = request.form['book_id']
         member_id = request.form['member_id']
@@ -249,12 +267,15 @@ def issue_book():
         already_issued = cur.fetchone()[0]
         if already_issued > 0:
             flash('এই member ইতিমধ্যে এই book নিয়েছে!', 'danger')
+            cur.close()
+            conn.close()
             return redirect(url_for('issue_book'))
         cur.execute("INSERT INTO transactions (book_id, member_id, due_date) VALUES (%s, %s, %s)",
             (book_id, member_id, due_date))
         cur.execute("UPDATE books SET available_copies = available_copies - 1 WHERE book_id = %s", (book_id,))
-        mysql.connection.commit()
+        conn.commit()
         cur.close()
+        conn.close()
         flash('Book issued successfully!', 'success')
         return redirect(url_for('transactions'))
     cur.execute("SELECT book_id, title, author, isbn, available_copies FROM books")
@@ -262,13 +283,15 @@ def issue_book():
     cur.execute("SELECT member_id, name, member_code, membership_expire FROM members WHERE status='active'")
     active_members = cur.fetchall()
     cur.close()
+    conn.close()
     return render_template('issue_book.html', books=all_books, members=active_members)
 
 @app.route('/return/<int:id>')
 def return_book(id):
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    cur = mysql.connection.cursor()
+    conn = get_db()
+    cur = conn.cursor()
     cur.execute("SELECT book_id, due_date FROM transactions WHERE transaction_id = %s", (id,))
     transaction = cur.fetchone()
     book_id = transaction[0]
@@ -282,8 +305,9 @@ def return_book(id):
                   SET return_date = %s, fine_amount = %s, status = 'returned'
                   WHERE transaction_id = %s""", (today, fine, id))
     cur.execute("UPDATE books SET available_copies = available_copies + 1 WHERE book_id = %s", (book_id,))
-    mysql.connection.commit()
+    conn.commit()
     cur.close()
+    conn.close()
     if fine > 0:
         flash(f'Book returned! Late fine: ৳{fine}', 'warning')
     else:
@@ -294,24 +318,28 @@ def return_book(id):
 @app.route('/search/books')
 def search_books_api():
     search = request.args.get('q', '')
-    cur = mysql.connection.cursor()
+    conn = get_db()
+    cur = conn.cursor()
     cur.execute("""SELECT book_id, title, author, isbn, available_copies 
                   FROM books WHERE title LIKE %s OR author LIKE %s OR isbn LIKE %s""",
                (f'%{search}%', f'%{search}%', f'%{search}%'))
     books = cur.fetchall()
     cur.close()
+    conn.close()
     result = [{'id': b[0], 'title': b[1], 'author': b[2], 'isbn': b[3], 'available': b[4]} for b in books]
     return jsonify(result)
 
 @app.route('/search/members')
 def search_members_api():
     search = request.args.get('q', '')
-    cur = mysql.connection.cursor()
+    conn = get_db()
+    cur = conn.cursor()
     cur.execute("""SELECT member_id, name, member_code, membership_expire 
                   FROM members WHERE name LIKE %s OR member_code LIKE %s OR phone LIKE %s""",
                (f'%{search}%', f'%{search}%', f'%{search}%'))
     members = cur.fetchall()
     cur.close()
+    conn.close()
     result = [{'id': m[0], 'name': m[1], 'code': m[2], 'expire': str(m[3])} for m in members]
     return jsonify(result)
 
