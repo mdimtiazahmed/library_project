@@ -15,6 +15,50 @@ app.config['MYSQL_PORT'] = int(os.environ.get('MYSQLPORT', 3306))
 
 mysql = MySQL(app)
 
+def init_db():
+    cur = mysql.connection.cursor()
+    cur.execute("""CREATE TABLE IF NOT EXISTS users (
+        user_id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(50),
+        password VARCHAR(100),
+        role VARCHAR(20) DEFAULT 'admin'
+    )""")
+    cur.execute("""CREATE TABLE IF NOT EXISTS books (
+        book_id INT AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(200),
+        author VARCHAR(100),
+        isbn VARCHAR(50),
+        category VARCHAR(50),
+        total_copies INT DEFAULT 1,
+        available_copies INT DEFAULT 1
+    )""")
+    cur.execute("""CREATE TABLE IF NOT EXISTS members (
+        member_id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(100),
+        email VARCHAR(100),
+        phone VARCHAR(20),
+        address VARCHAR(200),
+        join_date DATE DEFAULT (CURDATE()),
+        status VARCHAR(20) DEFAULT 'active'
+    )""")
+    cur.execute("""CREATE TABLE IF NOT EXISTS transactions (
+        transaction_id INT AUTO_INCREMENT PRIMARY KEY,
+        book_id INT,
+        member_id INT,
+        issue_date DATE DEFAULT (CURDATE()),
+        due_date DATE,
+        return_date DATE,
+        fine_amount INT DEFAULT 0,
+        status VARCHAR(20) DEFAULT 'issued'
+    )""")
+    cur.execute("""INSERT IGNORE INTO users (user_id, username, password, role) 
+        VALUES (1, 'admin', 'admin123', 'admin')""")
+    mysql.connection.commit()
+    cur.close()
+
+with app.app_context():
+    init_db()
+    
 # ==================== LOGIN ====================
 @app.route('/', methods=['GET', 'POST'])
 def login():
