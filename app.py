@@ -1,7 +1,7 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from flask_mysqldb import MySQL
-import bcrypt
 import os
+from datetime import date
 
 app = Flask(__name__)
 app.secret_key = 'library_secret_key_2024'
@@ -12,9 +12,11 @@ app.config['MYSQL_USER'] = os.environ.get('MYSQLUSER', 'root')
 app.config['MYSQL_PASSWORD'] = os.environ.get('MYSQLPASSWORD', '')
 app.config['MYSQL_DB'] = os.environ.get('MYSQLDATABASE', 'library_management')
 app.config['MYSQL_PORT'] = int(os.environ.get('MYSQLPORT', 3306))
-app.config['MYSQL_SSL'] = {'ssl': {}}
+app.config['MYSQL_SSL_DISABLED'] = False
 
 mysql = MySQL(app)
+
+db_initialized = False
 
 def init_db():
     cur = mysql.connection.cursor()
@@ -40,7 +42,10 @@ def init_db():
         phone VARCHAR(20),
         address VARCHAR(200),
         join_date DATE DEFAULT (CURDATE()),
-        status VARCHAR(20) DEFAULT 'active'
+        status VARCHAR(20) DEFAULT 'active',
+        member_code VARCHAR(20),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        membership_expire DATE
     )""")
     cur.execute("""CREATE TABLE IF NOT EXISTS transactions (
         transaction_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -61,10 +66,11 @@ def init_db():
 def initialize():
     global db_initialized
     if not db_initialized:
-        init_db()
-        db_initialized = True
-
-db_initialized = False
+        try:
+            init_db()
+            db_initialized = True
+        except Exception as e:
+            print(f"DB init error: {e}")
 
 # ==================== LOGIN ====================
 @app.route('/', methods=['GET', 'POST'])
@@ -120,9 +126,7 @@ def books():
     cur = mysql.connection.cursor()
     if search:
         cur.execute("""SELECT * FROM books 
-                      WHERE title LIKE %s 
-                      OR author LIKE %s 
-                      OR category LIKE %s""",
+                      WHERE title LIKE %s OR author LIKE %s OR category LIKE %s""",
                    (f'%{search}%', f'%{search}%', f'%{search}%'))
     else:
         cur.execute("SELECT * FROM books")
@@ -169,10 +173,8 @@ def members():
     cur = mysql.connection.cursor()
     if search:
         cur.execute("""SELECT * FROM members 
-                      WHERE name LIKE %s 
-                      OR email LIKE %s 
-                      OR phone LIKE %s
-                      OR member_code LIKE %s""",
+                      WHERE name LIKE %s OR email LIKE %s 
+                      OR phone LIKE %s OR member_code LIKE %s""",
                    (f'%{search}%', f'%{search}%', f'%{search}%', f'%{search}%'))
     else:
         cur.execute("SELECT * FROM members")
@@ -241,8 +243,6 @@ def issue_book():
         book_id = request.form['book_id']
         member_id = request.form['member_id']
         due_date = request.form['due_date']
-
-        # Check same book already issued to same member
         cur.execute("""SELECT COUNT(*) FROM transactions 
                       WHERE book_id = %s AND member_id = %s 
                       AND status = 'issued'""", (book_id, member_id))
@@ -250,7 +250,6 @@ def issue_book():
         if already_issued > 0:
             flash('এই member ইতিমধ্যে এই book নিয়েছে!', 'danger')
             return redirect(url_for('issue_book'))
-
         cur.execute("INSERT INTO transactions (book_id, member_id, due_date) VALUES (%s, %s, %s)",
             (book_id, member_id, due_date))
         cur.execute("UPDATE books SET available_copies = available_copies - 1 WHERE book_id = %s", (book_id,))
@@ -258,7 +257,6 @@ def issue_book():
         cur.close()
         flash('Book issued successfully!', 'success')
         return redirect(url_for('transactions'))
-
     cur.execute("SELECT book_id, title, author, isbn, available_copies FROM books")
     all_books = cur.fetchall()
     cur.execute("SELECT member_id, name, member_code, membership_expire FROM members WHERE status='active'")
@@ -275,14 +273,11 @@ def return_book(id):
     transaction = cur.fetchone()
     book_id = transaction[0]
     due_date = transaction[1]
-
-    from datetime import date
     today = date.today()
     fine = 0
     if today > due_date:
         days_late = (today - due_date).days
         fine = days_late * 5
-
     cur.execute("""UPDATE transactions 
                   SET return_date = %s, fine_amount = %s, status = 'returned'
                   WHERE transaction_id = %s""", (today, fine, id))
@@ -298,7 +293,6 @@ def return_book(id):
 # ==================== SEARCH API ====================
 @app.route('/search/books')
 def search_books_api():
-    from flask import jsonify
     search = request.args.get('q', '')
     cur = mysql.connection.cursor()
     cur.execute("""SELECT book_id, title, author, isbn, available_copies 
@@ -306,21 +300,11 @@ def search_books_api():
                (f'%{search}%', f'%{search}%', f'%{search}%'))
     books = cur.fetchall()
     cur.close()
-    result = []
-    for b in books:
-        result.append({
-            'id': b[0],
-            'title': b[1],
-            'author': b[2],
-            'isbn': b[3],
-            'available': b[4]
-        })
-    from flask import jsonify
+    result = [{'id': b[0], 'title': b[1], 'author': b[2], 'isbn': b[3], 'available': b[4]} for b in books]
     return jsonify(result)
 
 @app.route('/search/members')
 def search_members_api():
-    from flask import jsonify
     search = request.args.get('q', '')
     cur = mysql.connection.cursor()
     cur.execute("""SELECT member_id, name, member_code, membership_expire 
@@ -328,14 +312,7 @@ def search_members_api():
                (f'%{search}%', f'%{search}%', f'%{search}%'))
     members = cur.fetchall()
     cur.close()
-    result = []
-    for m in members:
-        result.append({
-            'id': m[0],
-            'name': m[1],
-            'code': m[2],
-            'expire': str(m[3])
-        })
+    result = [{'id': m[0], 'name': m[1], 'code': m[2], 'expire': str(m[3])} for m in members]
     return jsonify(result)
 
 if __name__ == '__main__':
