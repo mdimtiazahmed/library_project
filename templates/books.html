@@ -79,19 +79,19 @@
         <i class="fas fa-book-open me-2"></i>LibraryMS
     </div>
     <nav>
-        <a href="/dashboard" class="nav-link">
+        <a href="/admin/dashboard" class="nav-link">
             <i class="fas fa-home me-2"></i>Dashboard
         </a>
-        <a href="/books" class="nav-link active">
+        <a href="/admin/books" class="nav-link active">
             <i class="fas fa-book me-2"></i>Books
         </a>
-        <a href="/members" class="nav-link">
+        <a href="/admin/members" class="nav-link">
             <i class="fas fa-users me-2"></i>Members
         </a>
-        <a href="/transactions" class="nav-link">
+        <a href="/admin/transactions" class="nav-link">
             <i class="fas fa-exchange-alt me-2"></i>Transactions
         </a>
-        <a href="/issue" class="nav-link">
+        <a href="/admin/issue" class="nav-link">
             <i class="fas fa-hand-holding-heart me-2"></i>Issue Book
         </a>
         <hr style="border-color: rgba(255,255,255,0.1)">
@@ -106,7 +106,7 @@
     <div class="topbar">
         <h4 class="mb-0"><i class="fas fa-book me-2"></i>Books List</h4>
         <div class="d-flex gap-2">
-            <form method="GET" action="/books" class="d-flex gap-2">
+            <form method="GET" action="/admin/books" class="d-flex gap-2">
                 <input type="text" name="search" 
                        class="form-control" 
                        placeholder="Search by title, author, category..."
@@ -118,12 +118,12 @@
                     <i class="fas fa-search"></i>
                 </button>
                 {% if search %}
-                <a href="/books" class="btn btn-outline-danger">
+                <a href="/admin/books" class="btn btn-outline-danger">
                     <i class="fas fa-times"></i>
                 </a>
                 {% endif %}
             </form>
-            <a href="/books/add" class="btn btn-danger">
+            <a href="/admin/books/add" class="btn btn-danger">
                 <i class="fas fa-plus me-2"></i>Add New Book
             </a>
         </div>
@@ -164,7 +164,7 @@
                         <span class="badge-available">{{ book[6] }} left</span>
                     </td>
                     <td>
-                        <a href="/books/delete/{{ book[0] }}"
+                        <a href="/admin/books/delete/{{ book[0] }}"
                            onclick="return confirm('Delete this book?')"
                            class="btn btn-sm btn-danger">
                             <i class="fas fa-trash"></i>
