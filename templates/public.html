@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library - Book Collection</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: #0f0f1a; color: white; min-height: 100vh; }
+        .navbar-custom {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding: 15px 30px;
+        }
+        .navbar-brand { color: #e94560 !important; font-size: 1.5rem; font-weight: 700; }
+        .search-box {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            border-radius: 25px;
+            padding: 10px 20px;
+            width: 350px;
+        }
+        .search-box:focus {
+            background: rgba(255,255,255,0.15);
+            border-color: #e94560;
+            color: white;
+            box-shadow: none;
+            outline: none;
+        }
+        .search-box::placeholder { color: rgba(255,255,255,0.5); }
+        .book-card {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 15px;
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+            height: 100%;
+        }
+        .book-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(233,69,96,0.2);
+        }
+        .book-img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background: linear-gradient(135deg, #0f3460, #e94560);
+        }
+        .book-img-placeholder {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, #0f3460, #16213e);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            color: rgba(255,255,255,0.2);
+        }
+        .book-body { padding: 15px; }
+        .book-title { font-size: 1rem; font-weight: 700; color: white; margin-bottom: 5px; }
+        .book-author { color: rgba(255,255,255,0.6); font-size: 0.85rem; }
+        .badge-available {
+            background: rgba(25,135,84,0.3);
+            color: #28a745;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+        .badge-unavailable {
+            background: rgba(233,69,96,0.2);
+            color: #e94560;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+        .stats-bar {
+            background: rgba(26,26,46,0.8);
+            padding: 15px 30px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .hero {
+            background: linear-gradient(135deg, #1a1a2e, #0f3460);
+            padding: 50px 30px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .hero h1 { color: #e94560; font-size: 2.5rem; font-weight: 700; }
+        .hero p { color: rgba(255,255,255,0.7); font-size: 1.1rem; }
+    </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar-custom d-flex justify-content-between align-items-center">
+    <div class="navbar-brand">
+        <i class="fas fa-book-open me-2"></i>LibraryMS
+    </div>
+    <form method="GET" action="/" class="d-flex align-items-center gap-2">
+        <input type="text" name="search" class="search-box"
+               placeholder="Search books by title, author, category..."
+               value="{{ search }}">
+        <button type="submit" class="btn btn-danger rounded-pill px-3">
+            <i class="fas fa-search"></i>
+        </button>
+        {% if search %}
+        <a href="/" class="btn btn-outline-light rounded-pill px-3">
+            <i class="fas fa-times"></i>
+        </a>
+        {% endif %}
+    </form>
+    <a href="/admin" class="btn btn-outline-light btn-sm">
+        <i class="fas fa-lock me-1"></i>Admin
+    </a>
+</nav>
+
+<!-- Hero -->
+{% if not search %}
+<div class="hero">
+    <h1><i class="fas fa-book-open me-3"></i>Our Book Collection</h1>
+    <p>Browse our collection of {{ books|length }} books</p>
+</div>
+{% else %}
+<div class="hero" style="padding: 25px 30px;">
+    <h5 class="text-white-50">
+        Search results for "<span class="text-white">{{ search }}</span>" — {{ books|length }} books found
+    </h5>
+</div>
+{% endif %}
+
+<!-- Books Grid -->
+<div class="container-fluid px-4 py-4">
+    {% if books %}
+    <div class="row g-4">
+        {% for book in books %}
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+            <div class="book-card">
+                {% if book[7] %}
+                    <img src="{{ book[7] }}" alt="{{ book[1] }}" class="book-img">
+                {% else %}
+                    <div class="book-img-placeholder">
+                        <i class="fas fa-book"></i>
+                    </div>
+                {% endif %}
+                <div class="book-body">
+                    <div class="book-title">{{ book[1] }}</div>
+                    <div class="book-author mb-2">{{ book[2] }}</div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="badge bg-secondary">{{ book[4] }}</span>
+                        {% if book[6] > 0 %}
+                            <span class="badge-available">{{ book[6] }} available</span>
+                        {% else %}
+                            <span class="badge-unavailable">Unavailable</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-search fa-3x text-white-50 mb-3"></i>
+        <h4 class="text-white-50">No books found</h4>
+    </div>
+    {% endif %}
+</div>
+
+</body>
+</html>

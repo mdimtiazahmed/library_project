@@ -26,8 +26,10 @@ def init_db():
         isbn VARCHAR(50),
         category VARCHAR(50),
         total_copies INT DEFAULT 1,
-        available_copies INT DEFAULT 1
+        available_copies INT DEFAULT 1,
+        photo_url VARCHAR(500)
     )""")
+    cur.execute("""ALTER TABLE books ADD COLUMN IF NOT EXISTS photo_url VARCHAR(500)""")
     cur.execute("""CREATE TABLE IF NOT EXISTS members (
         member_id SERIAL PRIMARY KEY,
         name VARCHAR(100),
@@ -64,9 +66,29 @@ with app.app_context():
     except Exception as e:
         print(f"DB init error: {e}")
 
-# ==================== LOGIN ====================
-@app.route('/', methods=['GET', 'POST'])
-def login():
+# ==================== PUBLIC ====================
+@app.route('/')
+def public():
+    search = request.args.get('search', '')
+    conn = get_db()
+    cur = conn.cursor()
+    if search:
+        cur.execute("""SELECT * FROM books 
+                      WHERE title ILIKE %s OR author ILIKE %s OR category ILIKE %s
+                      ORDER BY title""",
+                   (f'%{search}%', f'%{search}%', f'%{search}%'))
+    else:
+        cur.execute("SELECT * FROM books ORDER BY title")
+    all_books = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template('public.html', books=all_books, search=search)
+
+# ==================== ADMIN LOGIN ====================
+@app.route('/admin', methods=['GET', 'POST'])
+def admin_login():
+    if 'user_id' in session:
+        return redirect(url_for('dashboard'))
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
@@ -88,13 +110,13 @@ def login():
 @app.route('/logout')
 def logout():
     session.clear()
-    return redirect(url_for('login'))
+    return redirect(url_for('admin_login'))
 
 # ==================== DASHBOARD ====================
-@app.route('/dashboard')
+@app.route('/admin/dashboard')
 def dashboard():
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('admin_login'))
     conn = get_db()
     cur = conn.cursor()
     cur.execute("SELECT COUNT(*) FROM books")
@@ -114,10 +136,10 @@ def dashboard():
         overdue_books=overdue_books)
 
 # ==================== BOOKS ====================
-@app.route('/books')
+@app.route('/admin/books')
 def books():
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('admin_login'))
     search = request.args.get('search', '')
     conn = get_db()
     cur = conn.cursor()
@@ -132,20 +154,22 @@ def books():
     conn.close()
     return render_template('books.html', books=all_books, search=search)
 
-@app.route('/books/add', methods=['GET', 'POST'])
+@app.route('/admin/books/add', methods=['GET', 'POST'])
 def add_book():
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('admin_login'))
     if request.method == 'POST':
         title = request.form['title']
         author = request.form['author']
         isbn = request.form['isbn']
         category = request.form['category']
         copies = request.form['copies']
+        photo_url = request.form.get('photo_url', '')
         conn = get_db()
         cur = conn.cursor()
-        cur.execute("INSERT INTO books (title, author, isbn, category, total_copies, available_copies) VALUES (%s, %s, %s, %s, %s, %s)",
-            (title, author, isbn, category, copies, copies))
+        cur.execute("""INSERT INTO books (title, author, isbn, category, total_copies, available_copies, photo_url) 
+                      VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+            (title, author, isbn, category, copies, copies, photo_url))
         conn.commit()
         cur.close()
         conn.close()
@@ -153,10 +177,10 @@ def add_book():
         return redirect(url_for('books'))
     return render_template('add_book.html')
 
-@app.route('/books/delete/<int:id>')
+@app.route('/admin/books/delete/<int:id>')
 def delete_book(id):
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('admin_login'))
     conn = get_db()
     cur = conn.cursor()
     cur.execute("DELETE FROM books WHERE book_id = %s", (id,))
@@ -167,10 +191,10 @@ def delete_book(id):
     return redirect(url_for('books'))
 
 # ==================== MEMBERS ====================
-@app.route('/members')
+@app.route('/admin/members')
 def members():
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('admin_login'))
     search = request.args.get('search', '')
     conn = get_db()
     cur = conn.cursor()
@@ -186,10 +210,10 @@ def members():
     conn.close()
     return render_template('members.html', members=all_members, search=search)
 
-@app.route('/members/add', methods=['GET', 'POST'])
+@app.route('/admin/members/add', methods=['GET', 'POST'])
 def add_member():
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('admin_login'))
     if request.method == 'POST':
         name = request.form['name']
         email = request.form['email']
@@ -201,7 +225,8 @@ def add_member():
         cur.execute("SELECT COUNT(*) FROM members")
         count = cur.fetchone()[0]
         member_code = f'MEM-{str(count + 1).zfill(4)}'
-        cur.execute("INSERT INTO members (name, email, phone, address, member_code, membership_expire) VALUES (%s, %s, %s, %s, %s, %s)",
+        cur.execute("""INSERT INTO members (name, email, phone, address, member_code, membership_expire) 
+                      VALUES (%s, %s, %s, %s, %s, %s)""",
             (name, email, phone, address, member_code, expire_date))
         conn.commit()
         cur.close()
@@ -210,10 +235,10 @@ def add_member():
         return redirect(url_for('members'))
     return render_template('add_member.html')
 
-@app.route('/members/delete/<int:id>')
+@app.route('/admin/members/delete/<int:id>')
 def delete_member(id):
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('admin_login'))
     conn = get_db()
     cur = conn.cursor()
     cur.execute("DELETE FROM members WHERE member_id = %s", (id,))
@@ -224,10 +249,10 @@ def delete_member(id):
     return redirect(url_for('members'))
 
 # ==================== TRANSACTIONS ====================
-@app.route('/transactions')
+@app.route('/admin/transactions')
 def transactions():
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('admin_login'))
     conn = get_db()
     cur = conn.cursor()
     cur.execute("""
@@ -244,10 +269,10 @@ def transactions():
     conn.close()
     return render_template('transactions.html', transactions=all_transactions)
 
-@app.route('/issue', methods=['GET', 'POST'])
+@app.route('/admin/issue', methods=['GET', 'POST'])
 def issue_book():
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('admin_login'))
     conn = get_db()
     cur = conn.cursor()
     if request.method == 'POST':
@@ -279,10 +304,10 @@ def issue_book():
     conn.close()
     return render_template('issue_book.html', books=all_books, members=active_members)
 
-@app.route('/return/<int:id>')
+@app.route('/admin/return/<int:id>')
 def return_book(id):
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('admin_login'))
     conn = get_db()
     cur = conn.cursor()
     cur.execute("SELECT book_id, due_date FROM transactions WHERE transaction_id = %s", (id,))
