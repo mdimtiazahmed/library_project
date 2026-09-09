@@ -64,17 +64,12 @@ def init_db():
     mysql.connection.commit()
     cur.close()
 
-@app.before_request
-def initialize():
-    global db_initialized
-    if not db_initialized:
-        try:
-            init_db()
-            db_initialized = True
-        except Exception as e:
-            print(f"DB init error: {e}")
-
-db_initialized = False
+with app.app_context():
+    try:
+        init_db()
+        print("DB initialized successfully!")
+    except Exception as e:
+        print(f"DB init error: {e}")
 
 # ==================== PUBLIC ====================
 @app.route('/')
