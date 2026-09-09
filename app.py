@@ -3,12 +3,89 @@ import psycopg2
 import psycopg2.extras
 import os
 from datetime import date
+from flask_cors import CORS
 
 app = Flask(__name__)
 app.secret_key = 'library_secret_key_2024'
 
+CORS(
+    app,
+    resources={r"/api/*": {"origins": [
+        "https://library-project-ziay.onrender.com",
+        "http://127.0.0.1:5500",       # optional: local frontend testing
+        "http://localhost:5500",       # optional: local frontend testing
+    ]}},
+)
+
+
 def get_db():
     return psycopg2.connect(os.environ.get('DATABASE_URL'), sslmode='require')
+
+@app.route('/api/books')
+def api_books():
+    """
+    Public, read-only JSON endpoint for the static frontend.
+    Supports:
+      /api/books                      -> all books
+      /api/books?q=harry              -> title/author/category contains "harry"
+      /api/books?category=Fiction     -> exact category match
+      /api/books?q=harry&category=Fiction  -> both combined
+    """
+    search = request.args.get('q', '').strip()
+    category = request.args.get('category', '').strip()
+ 
+    conn = get_db()
+    cur = conn.cursor()
+ 
+    query = """SELECT book_id, title, author, isbn, category,
+                      total_copies, available_copies, photo_url
+               FROM books WHERE 1=1"""
+    params = []
+ 
+    if search:
+        query += " AND (title ILIKE %s OR author ILIKE %s OR category ILIKE %s)"
+        like = f"%{search}%"
+        params += [like, like, like]
+ 
+    if category:
+        query += " AND category = %s"
+        params.append(category)
+ 
+    query += " ORDER BY title"
+ 
+    cur.execute(query, params)
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+ 
+    books = [{
+        'id': r[0],
+        'title': r[1],
+        'author': r[2],
+        'isbn': r[3],
+        'category': r[4],
+        'total_copies': r[5],
+        'available_copies': r[6],
+        'photo_url': r[7],
+    } for r in rows]
+ 
+    return jsonify({'count': len(books), 'books': books})
+ 
+ 
+@app.route('/api/categories')
+def api_categories():
+    """Returns the distinct list of categories currently in use, for the
+    frontend's filter dropdown."""
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""SELECT DISTINCT category FROM books
+                   WHERE category IS NOT NULL AND category <> ''
+                   ORDER BY category""")
+    categories = [r[0] for r in cur.fetchall()]
+    cur.close()
+    conn.close()
+    return jsonify(categories)
+
 
 def init_db():
     conn = get_db()
