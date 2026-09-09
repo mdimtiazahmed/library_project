@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from flask_mysqldb import MySQL
 from flask_cors import CORS
+import pymysql
 import os
 from datetime import date
 
@@ -9,7 +10,6 @@ app.secret_key = 'library_secret_key_2024'
 
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-# Database Configuration
 app.config['MYSQL_HOST'] = os.environ.get('MYSQLHOST', 'localhost')
 app.config['MYSQL_USER'] = os.environ.get('MYSQLUSER', 'root')
 app.config['MYSQL_PASSWORD'] = os.environ.get('MYSQLPASSWORD', '')
@@ -18,53 +18,6 @@ app.config['MYSQL_PORT'] = int(os.environ.get('MYSQLPORT', 3306))
 app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 
 mysql = MySQL(app)
-
-def init_db():
-    cur = mysql.connection.cursor()
-    cur.execute("""CREATE TABLE IF NOT EXISTS users (
-        user_id INT AUTO_INCREMENT PRIMARY KEY,
-        username VARCHAR(50),
-        password VARCHAR(100),
-        role VARCHAR(20) DEFAULT 'admin'
-    )""")
-    cur.execute("""CREATE TABLE IF NOT EXISTS books (
-        book_id INT AUTO_INCREMENT PRIMARY KEY,
-        title VARCHAR(200),
-        author VARCHAR(100),
-        isbn VARCHAR(50),
-        category VARCHAR(50),
-        total_copies INT DEFAULT 1,
-        available_copies INT DEFAULT 1,
-        photo_url VARCHAR(500)
-    )""")
-    cur.execute("""CREATE TABLE IF NOT EXISTS members (
-        member_id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(100),
-        email VARCHAR(100),
-        phone VARCHAR(20),
-        address VARCHAR(200),
-        join_date DATE DEFAULT (CURDATE()),
-        status VARCHAR(20) DEFAULT 'active',
-        member_code VARCHAR(20),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        membership_expire DATE
-    )""")
-    cur.execute("""CREATE TABLE IF NOT EXISTS transactions (
-        transaction_id INT AUTO_INCREMENT PRIMARY KEY,
-        book_id INT,
-        member_id INT,
-        issue_date DATE DEFAULT (CURDATE()),
-        due_date DATE,
-        return_date DATE,
-        fine_amount INT DEFAULT 0,
-        status VARCHAR(20) DEFAULT 'issued'
-    )""")
-    cur.execute("""INSERT IGNORE INTO users (user_id, username, password, role) 
-        VALUES (1, 'admin', 'admin123', 'admin')""")
-    mysql.connection.commit()
-    cur.close()
-
-import pymysql
 
 def init_db_direct():
     conn = pymysql.connect(
@@ -98,7 +51,7 @@ def init_db_direct():
         email VARCHAR(100),
         phone VARCHAR(20),
         address VARCHAR(200),
-        join_date DATE DEFAULT (CURDATE()),
+        join_date DATE,
         status VARCHAR(20) DEFAULT 'active',
         member_code VARCHAR(20),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -108,7 +61,7 @@ def init_db_direct():
         transaction_id INT AUTO_INCREMENT PRIMARY KEY,
         book_id INT,
         member_id INT,
-        issue_date DATE DEFAULT (CURDATE()),
+        issue_date DATE,
         due_date DATE,
         return_date DATE,
         fine_amount INT DEFAULT 0,
@@ -364,8 +317,8 @@ def issue_book():
             flash('এই member ইতিমধ্যে এই book নিয়েছে!', 'danger')
             cur.close()
             return redirect(url_for('issue_book'))
-        cur.execute("INSERT INTO transactions (book_id, member_id, due_date) VALUES (%s, %s, %s)",
-            (book_id, member_id, due_date))
+        cur.execute("INSERT INTO transactions (book_id, member_id, issue_date, due_date) VALUES (%s, %s, %s, %s)",
+            (book_id, member_id, date.today(), due_date))
         cur.execute("UPDATE books SET available_copies = available_copies - 1 WHERE book_id = %s", (book_id,))
         mysql.connection.commit()
         cur.close()
