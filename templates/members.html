@@ -159,29 +159,29 @@
                 <tr>
                     <td>
                         <div class="d-flex align-items-center gap-2">
-                            <div class="avatar">{{ member[1][0] }}</div>
-                            <strong>{{ member[1] }}</strong>
-                        </div>
-                    </td>
-                    <td><code style="color:#ffc107">{{ member[7] }}</code></td>
-                    <td>{{ member[2] }}</td>
-                    <td>{{ member[3] }}</td>
-                    <td>
-                        {% if member[9] %}
-                            <span class="active-expire">{{ member[9] }}</span>
-                        {% else %}
-                            <span class="text-white-50">—</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if member[6] == 'active' %}
-                            <span class="badge bg-success">Active</span>
-                        {% else %}
-                            <span class="badge bg-secondary">Inactive</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <a href="/admin/members/delete/{{ member[0] }}"
+                           <div class="avatar">{{ member.name[0] }}</div>
+<strong>{{ member.name }}</strong>
+</div>
+</td>
+<td><code style="color:#ffc107">{{ member.member_code }}</code></td>
+<td>{{ member.email }}</td>
+<td>{{ member.phone }}</td>
+<td>
+    {% if member.membership_expire %}
+        <span class="active-expire">{{ member.membership_expire }}</span>
+    {% else %}
+        <span class="text-white-50">—</span>
+    {% endif %}
+</td>
+<td>
+    {% if member.status == 'active' %}
+        <span class="badge bg-success">Active</span>
+    {% else %}
+        <span class="badge bg-secondary">Inactive</span>
+    {% endif %}
+</td>
+<td>
+    <a href="/admin/members/delete/{{ member.member_id }}"
                            onclick="return confirm('Delete this member?')"
                            class="btn btn-sm btn-danger">
                             <i class="fas fa-trash"></i>
