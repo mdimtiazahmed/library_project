@@ -1,15 +1,15 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
-from flask_mysqldb import MySQL
-from flask_cors import CORS
 import pymysql
+pymysql.install_as_MySQLdb()         
+from flask_mysqldb import MySQL     
+from flask_cors import CORS
 import os
 from datetime import date
 
 app = Flask(__name__)
 app.secret_key = 'library_secret_key_2024'
 
-from flask_cors import CORS
-CORS(app)
+CORS(app, origins="*", supports_credentials=True)
 
 app.config['MYSQL_HOST'] = os.environ.get('MYSQLHOST', 'localhost')
 app.config['MYSQL_USER'] = os.environ.get('MYSQLUSER', 'root')
