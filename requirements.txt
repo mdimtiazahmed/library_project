@@ -2,5 +2,5 @@ flask
 flask-mysqldb
 pymysql
 bcrypt
-gunicorn
 flask-cors
+gunicorn
